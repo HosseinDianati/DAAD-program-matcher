@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "daad-program-matcher",
+  "description": "DAAD Academic Program Matcher and German Higher Education Admissions Advisor",
+  "owner": {
+    "name": "Hossein Dianati",
+    "url": "https://github.com/HosseinDianati"
+  },
+  "plugins": [
+    {
+      "name": "daad-program-matcher",
+      "description": "Autonomous German university study program matcher. Matches student CVs (PDF/voice/text) to accredited English-taught German programs, evaluates Bavarian formula GPA and ECTS requirements, and outputs to production Excel workbooks.",
+      "source": "./",
+      "category": "productivity",
+      "homepage": "https://github.com/HosseinDianati/daad-program-matcher"
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 # DAAD Program Matcher & Admissions Advisor
 
-Autonomous German university admissions matcher for educational consultants and prospective students.
+Autonomous German university study program matcher and admissions advisor for international students and educational consultants.
 
 ## What This Skill Does
 1. Parses student CVs (PDF, images, text, or voice transcripts).
@@ -13,33 +13,29 @@ Autonomous German university admissions matcher for educational consultants and 
    - Tuition fees and semester ticket fees.
    - Exact application method (Uni-Assist vs Uni Portal vs VPD).
    - Direct links to both the course curriculum and the application registration portal.
-5. Generates a production-ready `.xlsx` spreadsheet matching the standard 11-column template.
+5. Generates a production-ready `.xlsx` spreadsheet matching the client template.
 
 ---
 
-## Team Setup Instructions (1 Minute)
+## Installation
 
-### Step 1: Install Python Dependencies
-Open Terminal / PowerShell and run:
+### In Gemini / Claude Code (One Command)
+
+Run this directly in chat:
 ```bash
-pip install openpyxl beautifulsoup4 requests
+/plugin marketplace add HosseinDianati/daad-program-matcher
+/plugin install daad-program-matcher@daad-program-matcher
 ```
 
-### Step 2: Copy the Skill Folder
-Place the `daad-program-matcher` folder into your global Antigravity/Gemini skills directory:
-
-* **Windows:**
-  `C:\Users\<YourUsername>\.gemini\config\skills\daad-program-matcher`
-* **macOS / Linux:**
-  `~/.gemini/config/skills/daad-program-matcher`
-
-*(Alternatively, if your team shares a project folder or Git repo, simply place this folder inside your repo at `.gemini/skills/daad-program-matcher` — anyone opening that folder will have the skill active automatically!)*
+Or simply paste this repo link into the chat:
+```text
+https://github.com/HosseinDianati/daad-program-matcher
+install skill
+```
 
 ---
 
-## How to Use
-
-Simply start a conversation with the assistant and attach a CV or give your instructions:
-- *"Match this attached PDF CV to accredited English-taught Master's programs in Germany for Winter semester."*
-- *"Find tuition-free German universities in Computer Science for a student with a 3.2 US GPA and IELTS 7.0."*
-- *"Here is a voice note of student preferences. Output the results using our Winter search template."*
+## Python Dependencies
+```bash
+pip install -r requirements.txt
+```

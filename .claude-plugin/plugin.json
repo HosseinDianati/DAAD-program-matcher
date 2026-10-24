@@ -1,0 +1,20 @@
+{
+  "name": "daad-program-matcher",
+  "description": "Autonomous German university study program matcher. Matches student CVs (PDF/voice/text) to accredited English-taught German programs, evaluates Bavarian formula GPA and ECTS requirements, and outputs to production Excel workbooks.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Hossein Dianati",
+    "url": "https://github.com/HosseinDianati"
+  },
+  "homepage": "https://github.com/HosseinDianati/daad-program-matcher",
+  "repository": "https://github.com/HosseinDianati/daad-program-matcher",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "claude-skills",
+    "daad",
+    "germany-study",
+    "admissions-advisor",
+    "higher-education"
+  ]
+}
