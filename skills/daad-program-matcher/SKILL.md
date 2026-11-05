@@ -1,6 +1,6 @@
 ---
 name: daad-program-matcher
-description: Autonomous German university study program matcher and admissions advisor. Parses candidate CVs (PDF/text/voice), computes German GPA equivalencies (Modified Bavarian Formula), deeply explores the DAAD International Programmes database, verifies university examination regulations, and outputs standardized 11-column Excel workbooks and Google Sheets. Triggers on DAAD, German university search, study in Germany, match CV to German programs, Uni-Assist programs, Winter/Summer intake search.
+description: Autonomous German university study program matcher and admissions advisor. Parses candidate CVs (PDF/text/voice), computes German GPA equivalencies (Modified Bavarian Formula), deeply explores the DAAD International Programmes database, performs two-phase Google search verification for department-specific deadlines and URLs, extracts complete DAAD document checklists, objectively determines admission chance tiers (Safe/Target/Reach), and outputs standardized 13-column Excel workbooks, Google Sheets matrices, and interactive client web dashboards. Triggers on DAAD, German university search, study in Germany, match CV to German programs, Uni-Assist programs, Winter/Summer intake search.
 ---
 
 # DAAD Program Matcher & Admissions Advisor Skill
@@ -8,18 +8,20 @@ description: Autonomous German university study program matcher and admissions a
 ## Overview
 This skill guides the agent to match international students to German higher education study programs using the official **DAAD International Programmes** database and official university examination regulations (*Zugangssatzung / Prüfungsordnung*).
 
-The output strictly follows the 11-column standard established in `Winter search list- Javad Mahmoodi.xlsx` and `Winter search Template.xlsx`:
+The output strictly follows the production **13-column standard**:
 1. `University`
 2. `Program`
-3. `Tuition fee`
-4. `Semester fee`
-5. `Intake`
-6. `Deadline`
-7. `Requirements`
-8. `Application Method`
-9. `Program link`
-10. `Note`
-11. `Apply Link`
+3. `Admission Chance` (`🟢 High (Safe)`, `🟡 Medium (Target)`, `🔴 Low (Reach)`)
+4. `Tuition fee`
+5. `Semester fee`
+6. `Intake`
+7. `Deadline` (verified department-specific non-EU application cutoff)
+8. `Requirements` (ECTS subject distributions, German/English CEFR levels, GRE/portfolio)
+9. `Required Documents` (complete checklist of application paperwork)
+10. `Application Method` (`Uni-Assist`, `Uni Portal`, or `Uni Portal (via VPD)`)
+11. `Program link` (verified canonical departmental program page)
+12. `Note` (APS certificate flags, state tuition caveats, aptitude tests)
+13. `Apply Link` (direct link to the application submission/login portal)
 
 ---
 
@@ -44,66 +46,70 @@ Where:
 ### 2. Country-Specific Mandatory Credentials
 - **APS Certificate (Akademische Prüfstelle)**:
   - **MANDATORY** for applicants with university degrees from **Iran, India, China, and Vietnam**.
-  - Always flag in `Note` or `Requirements` if the candidate is from one of these countries.
-- **Language Requirements**:
-  - **English-taught**: Typically requires IELTS Academic $\ge 6.5$ (or TOEFL iBT $\ge 90$). If a candidate has IELTS 7.5 (C1 level), they meet virtually all English requirements.
-  - **German-taught / Bilingual**: Check whether German A1 is strictly required upfront or can be completed during the first academic year (e.g., University of Passau, University of Bayreuth).
+  - Always flag in `Note` and include in `Required Documents` if candidate is from these countries.
 
 ---
 
-## Stage 2: DAAD Deep Discovery & Scraping
+## Stage 2: Two-Phase Search & Verification Pipeline
 
-### 1. DAAD Solr API Endpoint
-Query the DAAD International Programmes database:
-```
-GET https://www2.daad.de/deutschland/studienangebote/international-programmes/api/solr/en/search.json
-Parameters:
-  q: search term (e.g. "architecture", "energy", "computer science")
-  degree[]: 2 (Master's degree)
-  lang[]: 2 (English only) or 1 (German) or 3 (Both)
-  fee[]: 0 (No tuition fees) if student requested tuition-free
-  limit: 20
-  offset: 0
-  sort: 4
-```
+### Phase A: DAAD Discovery & Initial Candidate Compilation
+1. Query the DAAD Solr API:
+   `https://www2.daad.de/deutschland/studienangebote/international-programmes/api/solr/en/search.json`
+2. Fetch program details (`#tab_overview`, `#tab_costs`, `#tab_registration`).
+3. Compile the preliminary candidate list into memory.
 
-### 2. Detail Page Inspection
-For every shortlisted program, visit its DAAD detail page (`/detail/{id}/#tab_registration` and `#tab_costs`):
-- **Tuition fees**: Scrape exact amount per semester (or `none`).
-- **Semester contribution**: Scrape administrative/ticket fee (e.g., `300 Euro per semester`).
-- **Beginning / Intake**: `Winter semester` or `Summer and Winter`.
-- **Application periods / Deadlines**: Non-EU international deadlines (e.g., `15 December - 15 March`, `1 April - 31 May`).
-- **Academic admission requirements**: Extract degree prerequisite, minimum ECTS distribution, and portfolio/work experience requirements.
-- **Language requirements**: IELTS/TOEFL minimum scores, German CEFR levels and waivers.
-- **Submit application via**: Identify `uni-assist` vs university direct portal.
-
-### 3. University Regulation Verification
-- Follow the **"Course website"** link to verify:
-  - Exact ECTS breakdown by subject (e.g., *at least 35 CP in fundamentals of mathematics, at least 20 CP in programming*).
-  - Preliminary Review Documentation (**VPD**) requirement via Uni-Assist.
-  - Direct application portal link (`Apply Link`).
+### Phase B: Department-Level Google/Web Verification
+DAAD links often redirect to generic university homepages or cite general nationwide deadlines (e.g. July 15) rather than the strict departmental cutoff. For each shortlisted program:
+1. Search via Google / Search tool:
+   `"<University Name>" "<Program Name>" admission requirements deadline international Non-EU`
+2. **Correct the canonical program link**: Verify that `Program link` leads to the specific faculty/department degree overview (not the generic university homepage).
+3. **Verify exact faculty non-EU deadline**: Identify whether the department closes earlier for non-EU students (e.g. March 15, April 30, May 15, May 31).
+4. **Verify direct application portal**: Distinguish between `my.uni-assist.de`, institutional HISinOne/QIS, CampusOnline, Primuss, or MoveOn.
 
 ---
 
-## Stage 3: The 11-Column Output Specification
+## Stage 3: Admission Chance Categorization Engine
 
-| Column | Header | Exact Format Guidelines |
-|---|---|---|
-| A | `University` | Full official name in English (e.g., `HafenCity University Hamburg`, `TU Dresden`) |
-| B | `Program` | Full official degree name (e.g., `Resource Efficiency in Architecture and Planning (REAP) (M.Sc.)`) |
-| C | `Tuition fee` | `none` or exact amount (e.g., `1500 Euro per Semester`, `850 EUR`) |
-| D | `Semester fee` | e.g., `340 Euro per semester`, `120 Euro per semester` |
-| E | `Intake` | `Winter` or `Summer and Winter` |
-| F | `Deadline` | Exact window for Non-EU/international: e.g., `1 June to 15 July`, `15 March`, `2026-05-31` |
-| G | `Requirements` | Numbered list covering: 1. Bachelor's discipline & ECTS subject breakdown; 2. Minimum GPA / German grade cutoff; 3. English language score (IELTS/TOEFL); 4. German requirement or 1st-year waiver; 5. GRE/Portfolio/VPD details |
-| H | `Application Method` | `Uni-Assist`, `Uni Portal`, or `Uni Portal (via VPD)` |
-| I | `Program link` | Direct link to the university course curriculum or DAAD registration tab |
-| J | `Note` | Critical caveats (e.g., "APS Certificate required for Iranian/Indian degrees", "Portfolio required", "Baden-Württemberg €1500/sem tuition applies") |
-| K | `Apply Link` | Direct link to the application login portal (`https://my.uni-assist.de/`, `CampusOnline`, `HISinOne`, `VIBS`, `AlmaWeb`) |
+Every program must be consistently categorized into one of three tiers based on objective academic matching:
+
+1. **`High (Safe)`**:
+   - Candidate's German GPA is significantly stronger than the minimum cutoff (e.g., candidate has $\le 1.8$, requirement is $2.5$ or open admission / *zulassungsfrei*).
+   - Candidate satisfies 100% of prerequisite ECTS credit distributions in core subjects.
+   - English/German language scores exceed minimum thresholds.
+2. **`Medium (Target)`**:
+   - Candidate fulfills all formal academic criteria, but admission is restricted (*Numerus Clausus* / NC) or subject to a competitive aptitude review (*Eignungsverfahren*), portfolio assessment, or interview.
+   - Candidate GPA is competitive but within typical NC cutoffs.
+3. **`Low (Reach)`**:
+   - Highly selective quotas for non-EU applicants (e.g. TU Munich, RWTH Aachen).
+   - Prerequisite credit gaps in specific advanced modules (e.g., missing 10 ECTS in higher mathematics or theoretical computer science).
+   - Rigid portfolio or interview cutoffs with low international acceptance rates.
 
 ---
 
-## Stage 4: Execution Scripts
+## Stage 4: Required Documents Extraction Protocol
 
-- **Grade calculation**: `python C:\Users\hosse\.gemini\config\skills\daad-program-matcher\scripts\bavarian_calculator.py`
-- **Excel generation**: `python C:\Users\hosse\.gemini\config\skills\daad-program-matcher\scripts\excel_generator.py`
+For each program, populate Column 9 (`Required Documents`) with an itemized checklist derived from DAAD and university regulations:
+1. Official Bachelor's Degree Certificate (original + certified German/English translation).
+2. Complete Academic Transcript of Records with official grading scale explanation.
+3. **APS Certificate** (mandatory for Iran, India, China, Vietnam).
+4. **Module Handbook / Course Syllabi** (crucial for German faculty credit equivalency checks).
+5. Official Language Certificate (IELTS Academic, TOEFL iBT, or TestDaF/Goethe).
+6. Tabular Curriculum Vitae (CV) in European/Europass format.
+7. Letter of Motivation / Statement of Purpose (incorporating any department-specific prompts or word limits).
+8. Work Portfolio (specifying format, max pages, dimensions DIN A3/A4, e.g. for Architecture/Design).
+9. Proof of Professional Work Experience / Internship (specifying duration in months).
+10. **Uni-Assist VPD (Vorprüfungsdokumentation)** if applying through university portal with pre-evaluation.
+
+---
+
+## Stage 5: Output Generation (Excel, Google Sheet, and Interactive Web Portal)
+
+1. **Excel Generation**:
+   Execute `scripts/excel_generator.py` to create the formatted 13-column `.xlsx` workbook with auto-wrapping, bold headers, and color-coded chance cells.
+2. **Google Sheets Export**:
+   Generate a TSV/matrix dataset ready for direct pasting or syncing via the Google Sheets integration.
+3. **Interactive Client Dashboard**:
+   Execute `scripts/dashboard_generator.py` to produce `client_portal.html` containing:
+   - Dynamic Add Program & Remove Program buttons.
+   - Filter by Admission Chance (High/Medium/Low).
+   - In-browser 1-click download of the updated Excel file.
